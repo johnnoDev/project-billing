@@ -8,8 +8,28 @@ from django.contrib.auth import login
 from .models import *
 from .forms import SignUpForm, BrandForm
 from shared.mixins import StaffRequiredMixin
+from shared.decorators import audit_action
+from .forms import SignUpForm, BrandForm, InvoiceForm, InvoiceDetailFormSet
+from decimal import Decimal
+
 
 # Create your views here.
+# === HOME (Página principal) ===
+@login_required
+def home(request):
+    """Vista principal del sistema. Muestra resumen general."""
+    context = {
+        'total_brands': Brand.objects.count(),
+        'total_products': Product.objects.count(),
+        'total_customers': Customer.objects.count(),
+        'total_invoices': Invoice.objects.count(),
+        'recent_invoices': Invoice.objects.all()[:5],  # Últimas 5
+        'low_stock': Product.objects.filter(stock__lte=5, is_active=True),
+    }
+    return render(request, 'billing/home.html', context)
+
+
+
 # ANTES (cualquier usuario logueado puede borrar):
 class BrandDeleteView(LoginRequiredMixin, DeleteView):
     ...
@@ -57,11 +77,13 @@ class SignUpView(CreateView):
 
 # === BRAND (FBV) ===
 @login_required
+@audit_action('LIST_BRANDS')  
 def brand_list(request):
     brands = Brand.objects.all()
     return render(request, 'billing/brand_list.html', {'brands': brands})
 
 @login_required
+@audit_action('CREATE_BRAND')  
 def brand_create(request):
     if request.method == 'POST':
         form = BrandForm(request.POST)
@@ -73,6 +95,7 @@ def brand_create(request):
     return render(request, 'billing/brand_form.html', {'form':form, 'title':'Create Brand'})
 
 @login_required
+@audit_action('UPDATE_BRAND')
 def brand_update(request, pk):
     brand = get_object_or_404(Brand, pk=pk)
     if request.method == 'POST':
@@ -85,6 +108,7 @@ def brand_update(request, pk):
     return render(request, 'billing/brand_form.html', {'form':form, 'title':'Edit Brand'})
 
 @login_required
+@audit_action('DELETE_BRAND')
 def brand_delete(request, pk):
     brand = get_object_or_404(Brand, pk=pk)
     if request.method == 'POST':
@@ -133,10 +157,72 @@ class CustomerUpdateView(LoginRequiredMixin, UpdateView):
 class CustomerDeleteView(LoginRequiredMixin, DeleteView):
     model = Customer; template_name = 'billing/customer_confirm_delete.html'; success_url = reverse_lazy('billing:customer_list')
 
-# === INVOICE (CBV) ===
-class InvoiceListView(LoginRequiredMixin, ListView):
-    model = Invoice; template_name = 'billing/invoice_list.html'; context_object_name = 'items'
-class InvoiceCreateView(LoginRequiredMixin, CreateView):
-    model = Invoice; fields = ['customer']; template_name = 'billing/invoice_form.html'; success_url = reverse_lazy('billing:invoice_list')
-class InvoiceDeleteView(LoginRequiredMixin, DeleteView):
-    model = Invoice; template_name = 'billing/invoice_confirm_delete.html'; success_url = reverse_lazy('billing:invoice_list')
+# =============================================
+# CRUD DE INVOICE - VISTAS BASADAS EN FUNCIONES
+# (Requiere FBV porque usa formsets complejos)
+# =============================================
+
+@login_required
+def invoice_list(request):
+    """Lista todas las facturas con sus totales."""
+    invoices = Invoice.objects.select_related('customer').all()
+    return render(request, 'billing/invoice_list.html', {'items': invoices})
+
+
+@login_required
+def invoice_create(request):
+    """Crea factura con sus líneas de detalle."""
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST)
+        formset = InvoiceDetailFormSet(request.POST)
+
+        if form.is_valid() and formset.is_valid():
+            # Guardar factura (sin commit para asignar totales)
+            invoice = form.save(commit=False)
+            invoice.save()
+
+            # Asignar la factura al formset y guardar detalles
+            formset.instance = invoice
+            details = formset.save()
+
+            # Calcular totales
+            subtotal = sum(d.subtotal for d in invoice.details.all())
+            invoice.subtotal = subtotal
+            invoice.tax = subtotal * Decimal('0.15')  # IVA 15%
+            invoice.total = invoice.subtotal + invoice.tax
+            invoice.save()
+
+            messages.success(request, f'Invoice #{invoice.id} created! Total: ${invoice.total}')
+            return redirect('billing:invoice_list')
+    else:
+        form = InvoiceForm()
+        formset = InvoiceDetailFormSet()
+
+    return render(request, 'billing/invoice_form.html', {
+        'form': form,
+        'formset': formset,
+        'title': 'Create Invoice',
+    })
+
+
+@login_required
+def invoice_detail(request, pk):
+    """Muestra el detalle completo de una factura."""
+    invoice = get_object_or_404(
+        Invoice.objects.select_related('customer')
+                       .prefetch_related('details__product'),
+        pk=pk
+    )
+    return render(request, 'billing/invoice_detail.html', {'invoice': invoice})
+
+
+@login_required
+def invoice_delete(request, pk):
+    """Elimina una factura y todos sus detalles (CASCADE)."""
+    invoice = get_object_or_404(Invoice, pk=pk)
+    if request.method == 'POST':
+        invoice_id = invoice.id
+        invoice.delete()
+        messages.success(request, f'Invoice #{invoice_id} deleted!')
+        return redirect('billing:invoice_list')
+    return render(request, 'billing/invoice_confirm_delete.html', {'object': invoice})

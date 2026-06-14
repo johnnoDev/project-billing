@@ -10,7 +10,7 @@
 <!-- Barra de navegación -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
-    <a class="navbar-brand" href="{% url 'billing:brand_list' %}">Sales System</a>
+    <a class="navbar-brand" href="{% url 'billing:home' %}">Sales System</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -26,14 +26,26 @@
         {% endif %}
       </ul>
       <ul class="navbar-nav">
-        {% if user.is_authenticated %}
-        <li class="nav-item"><span class="nav-link text-light">{{ user.username }}</span></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Logout</a></li>
-        {% else %}
-        <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'billing:signup' %}">Sign Up</a></li>
-        {% endif %}
-      </ul>
+      {% if user.is_authenticated %}
+      <li class="nav-item">
+        <span class="nav-link text-light">{{ user.username }}</span>
+      </li>
+      <li class="nav-item">
+        <form method="post" action="{% url 'logout' %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="nav-link btn btn-link text-light"
+                  style="text-decoration:none;">Logout</button>
+        </form>
+      </li>
+      {% else %}
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'login' %}">Login</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'billing:signup' %}">Sign Up</a>
+      </li>
+      {% endif %}
+    </ul>
     </div>
   </div>
 </nav>

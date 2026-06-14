@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 app_name = 'billing'
 urlpatterns = [
+    # Home (Página principal)
+    path('', views.home, name='home'),
     path('signup/', views.SignUpView.as_view(), name='signup'),
     # Brand (FBV)
     path('brands/', views.brand_list, name='brand_list'),
@@ -28,8 +30,10 @@ urlpatterns = [
     path('customers/create/', views.CustomerCreateView.as_view(), name='customer_create'),
     path('customers/<int:pk>/edit/', views.CustomerUpdateView.as_view(), name='customer_update'),
     path('customers/<int:pk>/delete/', views.CustomerDeleteView.as_view(), name='customer_delete'),
-    # Invoice
-    path('invoices/', views.InvoiceListView.as_view(), name='invoice_list'),
-    path('invoices/create/', views.InvoiceCreateView.as_view(), name='invoice_create'),
-    path('invoices/<int:pk>/delete/', views.InvoiceDeleteView.as_view(), name='invoice_delete'),
+    # Invoice (FBV - funcional con detalle)
+    path('invoices/', views.invoice_list, name='invoice_list'),
+    path('invoices/create/', views.invoice_create, name='invoice_create'),
+    path('invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
+    path('invoices/<int:pk>/delete/', views.invoice_delete, name='invoice_delete'),
+
 ]
