@@ -7,8 +7,43 @@ from django.urls import reverse_lazy
 from django.contrib.auth import login
 from .models import *
 from .forms import SignUpForm, BrandForm
+from shared.mixins import StaffRequiredMixin
 
 # Create your views here.
+# ANTES (cualquier usuario logueado puede borrar):
+class BrandDeleteView(LoginRequiredMixin, DeleteView):
+    ...
+
+# DESPUÉS (solo staff puede borrar):
+class ProductGroupDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
+    model = ProductGroup
+    template_name = 'billing/productgroup_confirm_delete.html'
+    success_url = reverse_lazy('billing:productgroup_list')
+    staff_redirect_url = '/groups/'  # Redirige aquí si no es staff
+
+class SupplierDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
+    model = Supplier
+    template_name = 'billing/supplier_confirm_delete.html'
+    success_url = reverse_lazy('billing:supplier_list')
+    staff_redirect_url = '/suppliers/'
+
+class ProductDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
+    model = Product
+    template_name = 'billing/product_confirm_delete.html'
+    success_url = reverse_lazy('billing:product_list')
+    staff_redirect_url = '/products/'
+
+class CustomerDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
+    model = Customer
+    template_name = 'billing/customer_confirm_delete.html'
+    success_url = reverse_lazy('billing:customer_list')
+    staff_redirect_url = '/customers/'
+
+class InvoiceDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
+    model = Invoice
+    template_name = 'billing/invoice_confirm_delete.html'
+    success_url = reverse_lazy('billing:invoice_list')
+    staff_redirect_url = '/invoices/'
 
 # === REGISTRO ===
 class SignUpView(CreateView):
