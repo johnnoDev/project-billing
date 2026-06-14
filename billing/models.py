@@ -1,18 +1,8 @@
 from django.db import models
 from shared.validators import validate_cedula_ec
 
-# Create your models here.
-class Customer(models.Model):
-    # Agregar validators al campo dni
-    dni = models.CharField(
-        max_length=13,
-        unique=True,
-        verbose_name='DNI / RUC',
-        validators=[validate_cedula_ec]  # <-- AGREGAR ESTO
-    )
-
-"""Marcas de productos."""
 class Brand(models.Model):
+    """Marcas de productos."""
     name = models.CharField(max_length=100, unique=True, verbose_name='Brand Name')
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -72,7 +62,12 @@ class Product(models.Model):
 
 class Customer(models.Model):
     """Clientes. OneToOne con CustomerProfile."""
-    dni = models.CharField(max_length=13, unique=True, verbose_name='DNI/RUC')
+    dni = models.CharField(
+        max_length=13,
+        unique=True,
+        verbose_name='DNI/RUC',
+        validators=[validate_cedula_ec]
+    )
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(blank=True, null=True)
