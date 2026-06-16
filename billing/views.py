@@ -111,7 +111,44 @@ class SupplierDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
 
 # === PRODUCT (CBV) ===
 class ProductListView(LoginRequiredMixin, ListView):
-    model = Product; template_name = 'billing/product_list.html'; context_object_name = 'items'
+    model = Product
+    template_name = 'billing/product_list.html'
+    context_object_name = 'items'
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = Product.objects.select_related('brand', 'group').prefetch_related('suppliers')
+        g = self.request.GET
+        if name := g.get('name', '').strip():
+            qs = qs.filter(name__icontains=name)
+        if brand := g.get('brand', ''):
+            qs = qs.filter(brand_id=brand)
+        if group := g.get('group', ''):
+            qs = qs.filter(group_id=group)
+        if supplier := g.get('supplier', ''):
+            qs = qs.filter(suppliers__id=supplier)
+        if price_min := g.get('price_min', '').strip():
+            qs = qs.filter(unit_price__gte=price_min)
+        if price_max := g.get('price_max', '').strip():
+            qs = qs.filter(unit_price__lte=price_max)
+        if stock_min := g.get('stock_min', '').strip():
+            qs = qs.filter(stock__gte=stock_min)
+        if stock_max := g.get('stock_max', '').strip():
+            qs = qs.filter(stock__lte=stock_max)
+        if (is_active := g.get('is_active', '')) in ('true', 'false'):
+            qs = qs.filter(is_active=(is_active == 'true'))
+        return qs.distinct()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['brands'] = Brand.objects.order_by('name')
+        ctx['groups'] = ProductGroup.objects.order_by('name')
+        ctx['suppliers_list'] = Supplier.objects.order_by('name')
+        # q sin 'page' para armar URLs de paginación con filtros preservados
+        params = self.request.GET.copy()
+        params.pop('page', None)
+        ctx['q'] = params
+        return ctx
 
 class ProductCreateView(LoginRequiredMixin, CreateView):
     model = Product; fields = ['name', 'description', 'brand', 'group', 'suppliers', 'unit_price', 'stock', 'is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
