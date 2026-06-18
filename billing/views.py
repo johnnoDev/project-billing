@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth import login
 from .models import *
 from .forms import SignUpForm, BrandForm, InvoiceForm, InvoiceDetailFormSet
-from shared.mixins import StaffRequiredMixin
+from shared.mixins import StaffRequiredMixin, ExportMixin, export_response
 from shared.decorators import audit_action
 from decimal import Decimal
 
@@ -39,10 +39,19 @@ class SignUpView(CreateView):
 
 
 # === BRAND (FBV) ===
+_BRAND_EXPORT_FIELDS = [
+    ('name',       'Nombre'),
+    ('is_active',  'Activo'),
+    ('created_at', 'Creado'),
+]
+
 @login_required
 @audit_action('LIST_BRANDS')
 def brand_list(request):
     brands = Brand.objects.all()
+    exp = export_response(request, brands, _BRAND_EXPORT_FIELDS, 'Listado de Marcas', 'marcas')
+    if exp:
+        return exp
     return render(request, 'billing/brand_list.html', {'brands': brands})
 
 @login_required
@@ -82,8 +91,10 @@ def brand_delete(request, pk):
 
 
 # === PRODUCTGROUP (CBV) ===
-class ProductGroupListView(LoginRequiredMixin, ListView):
+class ProductGroupListView(LoginRequiredMixin, ExportMixin, ListView):
     model = ProductGroup; template_name = 'billing/productgroup_list.html'; context_object_name = 'items'
+    export_fields = [('name', 'Nombre'), ('is_active', 'Activo')]
+    export_filename = 'grupos'; export_title = 'Listado de Grupos de Producto'
 
 class ProductGroupCreateView(LoginRequiredMixin, CreateView):
     model = ProductGroup; fields = ['name', 'is_active']; template_name = 'billing/productgroup_form.html'; success_url = reverse_lazy('billing:productgroup_list')
@@ -96,8 +107,17 @@ class ProductGroupDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView)
 
 
 # === SUPPLIER (CBV) ===
-class SupplierListView(LoginRequiredMixin, ListView):
+class SupplierListView(LoginRequiredMixin, ExportMixin, ListView):
     model = Supplier; template_name = 'billing/supplier_list.html'; context_object_name = 'items'
+    export_fields = [
+        ('name',         'Proveedor'),
+        ('contact_name', 'Contacto'),
+        ('email',        'Email'),
+        ('phone',        'Teléfono'),
+        ('address',      'Dirección'),
+        ('is_active',    'Activo'),
+    ]
+    export_filename = 'proveedores'; export_title = 'Listado de Proveedores'
 
 class SupplierCreateView(LoginRequiredMixin, CreateView):
     model = Supplier; fields = ['name', 'contact_name', 'email', 'phone', 'address', 'is_active']; template_name = 'billing/supplier_form.html'; success_url = reverse_lazy('billing:supplier_list')
@@ -110,11 +130,22 @@ class SupplierDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
 
 
 # === PRODUCT (CBV) ===
-class ProductListView(LoginRequiredMixin, ListView):
+class ProductListView(LoginRequiredMixin, ExportMixin, ListView):
     model = Product
     template_name = 'billing/product_list.html'
     context_object_name = 'items'
     paginate_by = 10
+    export_filename = 'productos'
+    export_title = 'Listado de Productos'
+    export_fields = [
+        ('name',                                      'Nombre'),
+        ('brand.name',                                'Marca'),
+        ('group.name',                                'Grupo'),
+        (lambda o: f"${o.unit_price}",               'Precio'),
+        ('stock',                                     'Stock'),
+        (lambda o: 'Activo' if o.is_active else 'Inactivo', 'Estado'),
+        (lambda o: ', '.join(s.name for s in o.suppliers.all()), 'Proveedores'),
+    ]
 
     def get_queryset(self):
         qs = Product.objects.select_related('brand', 'group').prefetch_related('suppliers')
@@ -161,8 +192,17 @@ class ProductDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
 
 
 # === CUSTOMER (CBV) ===
-class CustomerListView(LoginRequiredMixin, ListView):
+class CustomerListView(LoginRequiredMixin, ExportMixin, ListView):
     model = Customer; template_name = 'billing/customer_list.html'; context_object_name = 'items'
+    export_fields = [
+        ('dni',        'DNI'),
+        ('last_name',  'Apellido'),
+        ('first_name', 'Nombre'),
+        ('email',      'Email'),
+        ('phone',      'Teléfono'),
+        (lambda o: 'Activo' if o.is_active else 'Inactivo', 'Estado'),
+    ]
+    export_filename = 'clientes'; export_title = 'Listado de Clientes'
 
 class CustomerCreateView(LoginRequiredMixin, CreateView):
     model = Customer; fields = ['dni', 'first_name', 'last_name', 'email', 'phone', 'address', 'is_active']; template_name = 'billing/customer_form.html'; success_url = reverse_lazy('billing:customer_list')
@@ -178,10 +218,22 @@ class CustomerDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
 # CRUD DE INVOICE - VISTAS BASADAS EN FUNCIONES
 # =============================================
 
+_INVOICE_EXPORT_FIELDS = [
+    ('id',                                           '#'),
+    (lambda o: str(o.customer),                     'Cliente'),
+    (lambda o: o.invoice_date.strftime('%d/%m/%Y'), 'Fecha'),
+    (lambda o: f"${o.subtotal}",                    'Subtotal'),
+    (lambda o: f"${o.tax}",                         'IVA'),
+    (lambda o: f"${o.total}",                       'Total'),
+]
+
 @login_required
 def invoice_list(request):
     """Lista todas las facturas con sus totales."""
     invoices = Invoice.objects.select_related('customer').all()
+    exp = export_response(request, invoices, _INVOICE_EXPORT_FIELDS, 'Listado de Facturas', 'facturas')
+    if exp:
+        return exp
     return render(request, 'billing/invoice_list.html', {'items': invoices})
 
 @login_required
