@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib.auth import login
 from .models import *
@@ -181,11 +181,19 @@ class ProductListView(LoginRequiredMixin, ExportMixin, ListView):
         ctx['q'] = params
         return ctx
 
+class ProductDetailView(LoginRequiredMixin, DetailView):
+    model = Product
+    template_name = 'billing/product_detail.html'
+    context_object_name = 'product'
+
+    def get_queryset(self):
+        return Product.objects.select_related('brand', 'group').prefetch_related('suppliers')
+
 class ProductCreateView(LoginRequiredMixin, CreateView):
-    model = Product; fields = ['name', 'description', 'brand', 'group', 'suppliers', 'unit_price', 'stock', 'is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
+    model = Product; fields = ['name', 'description', 'brand', 'group', 'suppliers', 'unit_price', 'stock', 'image', 'is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
 
 class ProductUpdateView(LoginRequiredMixin, UpdateView):
-    model = Product; fields = ['name', 'description', 'brand', 'group', 'suppliers', 'unit_price', 'stock', 'is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
+    model = Product; fields = ['name', 'description', 'brand', 'group', 'suppliers', 'unit_price', 'stock', 'image', 'is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
 
 class ProductDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     model = Product; template_name = 'billing/product_confirm_delete.html'; success_url = reverse_lazy('billing:product_list')

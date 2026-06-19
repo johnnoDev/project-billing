@@ -1,0 +1,134 @@
+{% extends 'billing/base.html' %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'billing:product_list' %}">Products</a>
+      </li>
+      <li class="breadcrumb-item active">{{ product.name }}</li>
+    </ol>
+  </nav>
+  <a href="{% url 'billing:product_list' %}" class="btn btn-outline-secondary btn-sm">
+    &larr; Volver al listado
+  </a>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    <div class="row g-0">
+
+      <!-- Columna izquierda: imagen -->
+      <div class="col-12 col-md-4 d-flex align-items-center justify-content-center p-4
+                  border-end bg-light rounded-start" style="min-height:320px;">
+        {% if product.image %}
+          <img src="{{ product.image.url }}" alt="{{ product.name }}"
+               class="img-fluid rounded shadow-sm"
+               style="max-height:380px;object-fit:contain;">
+        {% else %}
+          <div class="text-center text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="currentColor"
+                 class="bi bi-image mb-3 opacity-25" viewBox="0 0 16 16">
+              <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+              <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0
+                       2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5
+                       0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002
+                       12V3a1 1 0 0 1 1-1h12z"/>
+            </svg>
+            <p class="small mb-0">Sin imagen</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Columna derecha: datos -->
+      <div class="col-12 col-md-8 p-4">
+
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
+          <h3 class="fw-bold mb-0">{{ product.name }}</h3>
+          {% if product.is_active %}
+            <span class="badge bg-success fs-6 px-3 py-2">Activo</span>
+          {% else %}
+            <span class="badge bg-secondary fs-6 px-3 py-2">Inactivo</span>
+          {% endif %}
+        </div>
+
+        {% if product.description %}
+          <p class="text-muted mb-4">{{ product.description }}</p>
+        {% endif %}
+
+        <div class="row row-cols-1 row-cols-sm-2 g-3 mb-4">
+
+          <div class="col">
+            <div class="p-3 rounded bg-light h-100">
+              <p class="text-uppercase text-muted small fw-semibold mb-1">Precio unitario</p>
+              <p class="fs-4 fw-bold text-success mb-0">${{ product.unit_price }}</p>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="p-3 rounded bg-light h-100">
+              <p class="text-uppercase text-muted small fw-semibold mb-1">Stock</p>
+              <p class="fs-4 fw-bold mb-0
+                {% if product.stock <= 5 %}text-danger{% else %}text-dark{% endif %}">
+                {{ product.stock }}
+                {% if product.stock <= 5 %}
+                  <span class="badge bg-danger fs-6 ms-1">Stock bajo</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="p-3 rounded bg-light h-100">
+              <p class="text-uppercase text-muted small fw-semibold mb-1">Marca</p>
+              <p class="fw-semibold mb-0">{{ product.brand.name }}</p>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="p-3 rounded bg-light h-100">
+              <p class="text-uppercase text-muted small fw-semibold mb-1">Grupo</p>
+              <p class="fw-semibold mb-0">{{ product.group.name }}</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Proveedores -->
+        <div class="mb-4">
+          <p class="text-uppercase text-muted small fw-semibold mb-2">Proveedores</p>
+          <div class="d-flex flex-wrap gap-2">
+            {% for s in product.suppliers.all %}
+              <span class="badge bg-info text-dark px-3 py-2">{{ s.name }}</span>
+            {% empty %}
+              <span class="text-muted small">Sin proveedores asignados</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Fechas -->
+        <div class="border-top pt-3 d-flex flex-wrap gap-4 text-muted small">
+          <span>
+            <i class="bi bi-calendar-plus me-1"></i>
+            Creado: <strong>{{ product.created_at|date:"d/m/Y H:i" }}</strong>
+          </span>
+          <span>
+            <i class="bi bi-calendar-check me-1"></i>
+            Actualizado: <strong>{{ product.updated_at|date:"d/m/Y H:i" }}</strong>
+          </span>
+        </div>
+
+        <!-- Acciones -->
+        <div class="d-flex gap-2 mt-4 flex-wrap">
+          <a href="{% url 'billing:product_update' product.pk %}"
+             class="btn btn-warning">Editar</a>
+          <a href="{% url 'billing:product_delete' product.pk %}"
+             class="btn btn-outline-danger">Eliminar</a>
+        </div>
+
+      </div><!-- /col derecha -->
+    </div><!-- /row -->
+  </div><!-- /card-body -->
+</div><!-- /card -->
+{% endblock %}
