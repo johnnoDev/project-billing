@@ -146,6 +146,17 @@ class ProductListView(LoginRequiredMixin, ExportMixin, ListView):
         (lambda o: 'Activo' if o.is_active else 'Inactivo', 'Estado'),
         (lambda o: ', '.join(s.name for s in o.suppliers.all()), 'Proveedores'),
     ]
+    # Mapa clave→campo; las claves coinciden con data-col del template.
+    # El cliente envía ?cols=name,brand,price para exportar solo lo visible.
+    export_fields_map = {
+        'name':      ('name',                                      'Nombre'),
+        'brand':     ('brand.name',                                'Marca'),
+        'group':     ('group.name',                                'Grupo'),
+        'price':     (lambda o: f"${o.unit_price}",               'Precio'),
+        'stock':     ('stock',                                     'Stock'),
+        'status':    (lambda o: 'Activo' if o.is_active else 'Inactivo', 'Estado'),
+        'suppliers': (lambda o: ', '.join(s.name for s in o.suppliers.all()), 'Proveedores'),
+    }
 
     def get_queryset(self):
         qs = Product.objects.select_related('brand', 'group').prefetch_related('suppliers')

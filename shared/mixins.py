@@ -26,18 +26,24 @@ class ExportMixin:
         class MyListView(LoginRequiredMixin, ExportMixin, ListView):
             export_fields = [
                 ('name',       'Nombre'),
-                ('brand.name', 'Marca'),      # ruta con puntos para FK
-                ('is_active',  'Activo'),
-                (lambda o: f"${o.unit_price}", 'Precio'),  # callable
+                ('brand.name', 'Marca'),
+                (lambda o: f"${o.unit_price}", 'Precio'),
             ]
+            # Opcional: mapa clave→campo para selección dinámica desde el cliente.
+            # Las claves deben coincidir con los atributos data-col del template.
+            export_fields_map = {
+                'name':  ('name',  'Nombre'),
+                'brand': ('brand.name', 'Marca'),
+            }
             export_filename = 'productos'
             export_title    = 'Listado de Productos'
 
-    Los botones en el template deben apuntar a la misma URL con
-    ?export=pdf  o  ?export=excel  (preservando los demás filtros).
+    El cliente pasa ?export=pdf&cols=name,brand,price para exportar solo
+    las columnas visibles. Si no hay parámetro cols, se usan export_fields.
     """
 
-    export_fields: list = []   # [(accessor_or_callable, 'Encabezado'), ...]
+    export_fields: list = []        # [(accessor_or_callable, 'Encabezado'), ...]
+    export_fields_map: dict = {}    # {'col_key': (accessor_or_callable, 'Encabezado')}
     export_filename: str = 'listado'
     export_title: str = 'Listado'
 
@@ -46,16 +52,31 @@ class ExportMixin:
     def get(self, request, *args, **kwargs):
         fmt = request.GET.get('export', '').lower()
         if fmt == 'pdf':
-            return self._render_pdf(self.get_queryset())
+            fields = self._get_active_export_fields(request)
+            return self._render_pdf(self.get_queryset(), fields)
         if fmt == 'excel':
-            return self._render_excel(self.get_queryset())
+            fields = self._get_active_export_fields(request)
+            return self._render_excel(self.get_queryset(), fields)
         return super().get(request, *args, **kwargs)
 
     # -- helpers -----------------------------------------------------------
 
+    def _get_active_export_fields(self, request):
+        """
+        Retorna la lista de campos a exportar según el parámetro ?cols=.
+        Si no hay cols o no hay export_fields_map, usa export_fields completo.
+        """
+        cols_param = request.GET.get('cols', '').strip()
+        fields_map = getattr(self, 'export_fields_map', {})
+        if cols_param and fields_map:
+            selected = [k.strip() for k in cols_param.split(',') if k.strip()]
+            filtered = [fields_map[k] for k in selected if k in fields_map]
+            if filtered:
+                return filtered
+        return self.export_fields
+
     @staticmethod
     def _resolve(obj, accessor):
-        """Resuelve un accessor (str con puntos o callable) sobre obj."""
         if callable(accessor):
             return accessor(obj)
         value = obj
@@ -65,18 +86,19 @@ class ExportMixin:
                 value = value()
         return '' if value is None else str(value)
 
-    def _header_and_rows(self, queryset):
-        headers = [label for _, label in self.export_fields]
+    def _header_and_rows(self, queryset, fields=None):
+        fields = fields if fields is not None else self.export_fields
+        headers = [label for _, label in fields]
         rows = [
-            [self._resolve(obj, acc) for acc, _ in self.export_fields]
+            [self._resolve(obj, acc) for acc, _ in fields]
             for obj in queryset
         ]
         return headers, rows
 
     # -- PDF ---------------------------------------------------------------
 
-    def _render_pdf(self, queryset):
-        headers, rows = self._header_and_rows(queryset)
+    def _render_pdf(self, queryset, fields=None):
+        headers, rows = self._header_and_rows(queryset, fields)
         buf = _build_pdf(self.export_title, headers, rows)
         response = HttpResponse(buf, content_type='application/pdf')
         response['Content-Disposition'] = (
@@ -86,8 +108,8 @@ class ExportMixin:
 
     # -- Excel -------------------------------------------------------------
 
-    def _render_excel(self, queryset):
-        headers, rows = self._header_and_rows(queryset)
+    def _render_excel(self, queryset, fields=None):
+        headers, rows = self._header_and_rows(queryset, fields)
         buf = _build_excel(self.export_title, headers, rows)
         response = HttpResponse(
             buf,

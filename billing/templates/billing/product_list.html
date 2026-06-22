@@ -1,32 +1,83 @@
 {% extends 'billing/base.html' %}
 {% block title %}Products{% endblock %}
 {% block content %}
+
+{# ── Toolbar ── #}
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
   <h2 class="mb-0">Products</h2>
   <div class="d-flex gap-2 flex-wrap">
-    <a href="?{{ q.urlencode }}&export=pdf"   class="btn btn-sm btn-outline-danger"  title="Descargar PDF">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M4 0h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm1 2v1h6V2H5zm0 3v1h6V5H5zm0 3v1h3V8H5z"/></svg>
+    <a id="btn-pdf" href="#" class="btn btn-sm btn-outline-danger" title="Descargar PDF">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+        <path d="M4 0h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm1 2v1h6V2H5zm0 3v1h6V5H5zm0 3v1h3V8H5z"/>
+      </svg>
       PDF
     </a>
-    <a href="?{{ q.urlencode }}&export=excel" class="btn btn-sm btn-outline-success" title="Descargar Excel">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/><path d="M8.646 6.646a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L10.293 9 8.646 7.354a.5.5 0 0 1 0-.708zm-1.292 0a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0 0 .708l2 2a.5.5 0 0 0 .708-.708L5.707 9l1.647-1.646a.5.5 0 0 0 0-.708z"/></svg>
+    <a id="btn-excel" href="#" class="btn btn-sm btn-outline-success" title="Descargar Excel">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+        <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+        <path d="M8.646 6.646a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L10.293 9 8.646 7.354a.5.5 0 0 1 0-.708zm-1.292 0a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0 0 .708l2 2a.5.5 0 0 0 .708-.708L5.707 9l1.647-1.646a.5.5 0 0 0 0-.708z"/>
+      </svg>
       Excel
     </a>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-cols-toggle"
+            data-bs-toggle="modal" data-bs-target="#colsModal" title="Campos visibles">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+        <path d="M0 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 1 12.5V5a1 1 0 0 1-1-1V2zm2 3v7.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V5H2zm13-3H1v2h14V2zM5 7.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
+      </svg>
+      Campos visibles
+      <span id="col-counter" class="badge bg-secondary ms-1">9/9</span>
+    </button>
   </div>
 </div>
 
-<!-- Filter Form -->
+{# ── Modal de columnas ── #}
+<div class="modal fade" id="colsModal" tabindex="-1" aria-labelledby="colsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header" style="background:#212529;color:#fff;">
+        <h5 class="modal-title" id="colsModalLabel">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="me-2" viewBox="0 0 16 16">
+            <path d="M0 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 1 12.5V5a1 1 0 0 1-1-1V2zm2 3v7.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V5H2zm13-3H1v2h14V2zM5 7.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
+          </svg>
+          Campos visibles
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body pb-2">
+        <p class="text-muted small mb-3" id="col-modal-counter">Mostrando 9 de 9 columnas</p>
+        <div id="col-validation" class="alert alert-warning py-2 small mb-3 d-none">
+          Debes mantener al menos una columna visible.
+        </div>
+        <div class="row g-1" id="col-checks">
+          {# rendered by JavaScript #}
+        </div>
+      </div>
+      <div class="modal-footer flex-wrap gap-2 justify-content-between border-top">
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-select-all">Seleccionar todo</button>
+          <button type="button" class="btn btn-sm btn-outline-warning" id="btn-reset">Restablecer</button>
+        </div>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-apply">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+            <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022z"/>
+          </svg>
+          Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Filter Form ── #}
 <form method="get" class="card card-body bg-light mb-3">
   <div class="row g-2 align-items-end">
 
-    <!-- Name -->
     <div class="col-12 col-sm-6 col-md-3">
       <label class="form-label fw-semibold mb-1">Name</label>
       <input type="text" name="name" value="{{ q.name }}"
              class="form-control form-control-sm" placeholder="Search name…">
     </div>
 
-    <!-- Brand -->
     <div class="col-12 col-sm-6 col-md-2">
       <label class="form-label fw-semibold mb-1">Brand</label>
       <select name="brand" class="form-select form-select-sm">
@@ -39,7 +90,6 @@
       </select>
     </div>
 
-    <!-- Group -->
     <div class="col-12 col-sm-6 col-md-2">
       <label class="form-label fw-semibold mb-1">Group</label>
       <select name="group" class="form-select form-select-sm">
@@ -52,7 +102,6 @@
       </select>
     </div>
 
-    <!-- Supplier -->
     <div class="col-12 col-sm-6 col-md-2">
       <label class="form-label fw-semibold mb-1">Supplier</label>
       <select name="supplier" class="form-select form-select-sm">
@@ -65,7 +114,6 @@
       </select>
     </div>
 
-    <!-- Status -->
     <div class="col-12 col-sm-6 col-md-1">
       <label class="form-label fw-semibold mb-1">Status</label>
       <select name="is_active" class="form-select form-select-sm">
@@ -75,129 +123,126 @@
       </select>
     </div>
 
-  </div><!-- /row 1 -->
+  </div>
 
   <div class="row g-2 align-items-end mt-1">
 
-    <!-- Price Min -->
     <div class="col-6 col-sm-3 col-md-2">
       <label class="form-label fw-semibold mb-1">Price min</label>
       <input type="number" name="price_min" value="{{ q.price_min }}"
              class="form-control form-control-sm" min="0" step="0.01" placeholder="0.00">
     </div>
 
-    <!-- Price Max -->
     <div class="col-6 col-sm-3 col-md-2">
       <label class="form-label fw-semibold mb-1">Price max</label>
       <input type="number" name="price_max" value="{{ q.price_max }}"
              class="form-control form-control-sm" min="0" step="0.01" placeholder="0.00">
     </div>
 
-    <!-- Stock Min -->
     <div class="col-6 col-sm-3 col-md-2">
       <label class="form-label fw-semibold mb-1">Stock min</label>
       <input type="number" name="stock_min" value="{{ q.stock_min }}"
              class="form-control form-control-sm" min="0" step="1" placeholder="0">
     </div>
 
-    <!-- Stock Max -->
     <div class="col-6 col-sm-3 col-md-2">
       <label class="form-label fw-semibold mb-1">Stock max</label>
       <input type="number" name="stock_max" value="{{ q.stock_max }}"
              class="form-control form-control-sm" min="0" step="1" placeholder="0">
     </div>
 
-    <!-- Buttons -->
     <div class="col-12 col-sm-6 col-md-4 d-flex gap-2">
       <button type="submit" class="btn btn-sm btn-primary">Filter</button>
       <a href="{% url 'billing:product_list' %}" class="btn btn-sm btn-secondary">Clear</a>
       <a href="{% url 'billing:product_create' %}" class="btn btn-sm btn-success ms-auto">+ New Product</a>
     </div>
 
-  </div><!-- /row 2 -->
+  </div>
 </form>
 
-<!-- Results count -->
+{# ── Results count ── #}
 <p class="text-muted small mb-2">
   Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} product(s)
 </p>
 
-<!-- Table -->
+{# ── Table ── #}
 <div class="table-responsive">
-  <table class="table table-striped table-hover align-middle">
+  <table class="table table-striped table-hover align-middle" id="product-table">
     <thead class="table-dark">
       <tr>
-        <th>Image</th>
-        <th>Name</th>
-        <th>Brand</th>
-        <th>Group</th>
-        <th>Price</th>
-        <th>Stock</th>
-        <th>Status</th>
-        <th>Suppliers</th>
-        <th>Actions</th>
+        <th data-col="image">Imagen</th>
+        <th data-col="name">Nombre</th>
+        <th data-col="brand">Marca</th>
+        <th data-col="group">Grupo</th>
+        <th data-col="price">Precio</th>
+        <th data-col="stock">Stock</th>
+        <th data-col="status">Estado</th>
+        <th data-col="suppliers">Proveedores</th>
+        <th data-col="actions">Acciones</th>
       </tr>
     </thead>
     <tbody>
       {% for item in items %}
       <tr>
-        <td>
+        <td data-col="image">
           {% if item.image %}
             <img src="{{ item.image.url }}" alt="{{ item.name }}"
                  style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
           {% else %}
-            <span class="text-muted small">Sin imagen</span>
+            <div class="d-flex align-items-center justify-content-center bg-light border rounded"
+                 style="width:48px;height:48px;border-radius:6px!important;" title="Sin imagen">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#adb5bd" viewBox="0 0 16 16">
+                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+              </svg>
+            </div>
           {% endif %}
         </td>
-        <td>{{ item.name }}</td>
-        <td>{{ item.brand.name }}</td>
-        <td>{{ item.group.name }}</td>
-        <td>${{ item.unit_price }}</td>
-        <td>
+        <td data-col="name">{{ item.name }}</td>
+        <td data-col="brand">{{ item.brand.name }}</td>
+        <td data-col="group">{{ item.group.name }}</td>
+        <td data-col="price">${{ item.unit_price }}</td>
+        <td data-col="stock">
           {% if item.stock <= 5 %}
             <span class="badge bg-danger">{{ item.stock }}</span>
           {% else %}
             {{ item.stock }}
           {% endif %}
         </td>
-        <td>
+        <td data-col="status">
           {% if item.is_active %}
             <span class="badge bg-success">Active</span>
           {% else %}
             <span class="badge bg-secondary">Inactive</span>
           {% endif %}
         </td>
-        <td>
+        <td data-col="suppliers">
           {% for s in item.suppliers.all %}
             <span class="badge bg-info text-dark">{{ s.name }}</span>
           {% empty %}
             <span class="text-muted">—</span>
           {% endfor %}
         </td>
-        <td>
+        <td data-col="actions">
           <a href="{% url 'billing:product_detail' item.pk %}" class="btn btn-sm btn-info text-white">Ver detalle</a>
           <a href="{% url 'billing:product_update' item.pk %}" class="btn btn-sm btn-warning">Edit</a>
           <a href="{% url 'billing:product_delete' item.pk %}" class="btn btn-sm btn-danger">Delete</a>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="9" class="text-center text-muted py-4">No products match the current filters.</td></tr>
+      <tr><td colspan="100" class="text-center text-muted py-4">No products match the current filters.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 
-<!-- Pagination -->
+{# ── Pagination ── #}
 {% if paginator.num_pages > 1 %}
 <nav aria-label="Product pagination">
   <ul class="pagination pagination-sm justify-content-center flex-wrap">
 
-    <!-- Previous -->
     <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
-      <a class="page-link"
-         href="?page={{ page_obj.previous_page_number }}&{{ q.urlencode }}">
-        &laquo;
-      </a>
+      <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ q.urlencode }}">&laquo;</a>
     </li>
 
     {% for num in paginator.page_range %}
@@ -212,15 +257,189 @@
       {% endif %}
     {% endfor %}
 
-    <!-- Next -->
     <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
-      <a class="page-link"
-         href="?page={{ page_obj.next_page_number }}&{{ q.urlencode }}">
-        &raquo;
-      </a>
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ q.urlencode }}">&raquo;</a>
     </li>
 
   </ul>
 </nav>
 {% endif %}
+
+{# ── Styles ── #}
+<style>
+  @keyframes colFadeIn { from { opacity:.6 } to { opacity:1 } }
+  .col-fade { animation: colFadeIn .25s ease; }
+  #col-checks .col-check-item { border-radius:6px; transition:background .12s; }
+  #col-checks .col-check-item:hover { background:#f1f3f5; }
+</style>
+
+{# ── Scripts ── #}
+<script>
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'product_list_visible_cols';
+  const FILTER_QS   = '{{ q.urlencode|escapejs }}';
+
+  /* Column definitions ─ single source of truth */
+  const COLUMNS = [
+    { key: 'image',     label: 'Imagen',      exportable: false },
+    { key: 'name',      label: 'Nombre',      exportable: true  },
+    { key: 'brand',     label: 'Marca',       exportable: true  },
+    { key: 'group',     label: 'Grupo',       exportable: true  },
+    { key: 'price',     label: 'Precio',      exportable: true  },
+    { key: 'stock',     label: 'Stock',       exportable: true  },
+    { key: 'status',    label: 'Estado',      exportable: true  },
+    { key: 'suppliers', label: 'Proveedores', exportable: true  },
+    { key: 'actions',   label: 'Acciones',    exportable: false },
+  ];
+
+  const DEFAULT_STATE = Object.fromEntries(COLUMNS.map(c => [c.key, true]));
+
+  /* ── State persistence ── */
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+    } catch (_) {}
+    return { ...DEFAULT_STATE };
+  }
+
+  function saveState(state) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+  }
+
+  /* ── Visibility ── */
+
+  function countVisible(state) {
+    return COLUMNS.filter(c => state[c.key]).length;
+  }
+
+  function applyVisibility(state) {
+    document.querySelectorAll('[data-col]').forEach(el => {
+      el.style.display = state[el.dataset.col] ? '' : 'none';
+    });
+
+    const tbl = document.getElementById('product-table');
+    if (tbl) {
+      tbl.classList.remove('col-fade');
+      void tbl.offsetWidth; /* force reflow for animation restart */
+      tbl.classList.add('col-fade');
+    }
+
+    updateCounterBadge(state);
+    updateExportLinks(state);
+  }
+
+  function updateCounterBadge(state) {
+    const vis = countVisible(state);
+    const tot = COLUMNS.length;
+    const badge = document.getElementById('col-counter');
+    if (!badge) return;
+    badge.textContent = `${vis}/${tot}`;
+    badge.className   = vis < tot
+      ? 'badge bg-warning text-dark ms-1'
+      : 'badge bg-secondary ms-1';
+  }
+
+  function updateExportLinks(state) {
+    const exportCols = COLUMNS.filter(c => c.exportable && state[c.key]).map(c => c.key);
+    const baseQS  = FILTER_QS ? FILTER_QS + '&' : '';
+    const colsStr = exportCols.length ? '&cols=' + exportCols.join(',') : '';
+    const pdf   = document.getElementById('btn-pdf');
+    const excel = document.getElementById('btn-excel');
+    if (pdf)   pdf.href   = '?' + baseQS + 'export=pdf'   + colsStr;
+    if (excel) excel.href = '?' + baseQS + 'export=excel' + colsStr;
+  }
+
+  /* ── Modal ── */
+
+  function renderCheckboxes(state) {
+    const container = document.getElementById('col-checks');
+    if (!container) return;
+    container.innerHTML = '';
+    COLUMNS.forEach(col => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'col-6 col-sm-4 col-check-item p-1';
+      wrapper.innerHTML = `
+        <div class="form-check mb-0">
+          <input class="form-check-input col-check" type="checkbox"
+                 id="chk-${col.key}" value="${col.key}" ${state[col.key] ? 'checked' : ''}>
+          <label class="form-check-label user-select-none small" for="chk-${col.key}">
+            ${col.label}
+            ${!col.exportable ? '<span class="text-muted" style="font-size:.75em">&nbsp;(vista)</span>' : ''}
+          </label>
+        </div>`;
+      container.appendChild(wrapper);
+      wrapper.querySelector('.col-check').addEventListener('change', syncModalCounter);
+    });
+    syncModalCounter();
+  }
+
+  function syncModalCounter() {
+    const checked = document.querySelectorAll('.col-check:checked').length;
+    const el = document.getElementById('col-modal-counter');
+    if (el) el.textContent = `Mostrando ${checked} de ${COLUMNS.length} columnas`;
+  }
+
+  function getModalState() {
+    const state = {};
+    document.querySelectorAll('.col-check').forEach(chk => {
+      state[chk.value] = chk.checked;
+    });
+    return state;
+  }
+
+  /* ── Bootstrap modal events ── */
+
+  const modalEl = document.getElementById('colsModal');
+  if (modalEl) {
+    modalEl.addEventListener('show.bs.modal', () => {
+      renderCheckboxes(loadState());
+      const warn = document.getElementById('col-validation');
+      if (warn) warn.classList.add('d-none');
+    });
+  }
+
+  /* Apply */
+  const btnApply = document.getElementById('btn-apply');
+  if (btnApply) {
+    btnApply.addEventListener('click', () => {
+      const newState = getModalState();
+      const warn = document.getElementById('col-validation');
+      if (countVisible(newState) === 0) {
+        if (warn) warn.classList.remove('d-none');
+        return;
+      }
+      if (warn) warn.classList.add('d-none');
+      saveState(newState);
+      applyVisibility(newState);
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    });
+  }
+
+  /* Select all */
+  const btnAll = document.getElementById('btn-select-all');
+  if (btnAll) {
+    btnAll.addEventListener('click', () => {
+      document.querySelectorAll('.col-check').forEach(c => { c.checked = true; });
+      syncModalCounter();
+    });
+  }
+
+  /* Reset */
+  const btnReset = document.getElementById('btn-reset');
+  if (btnReset) {
+    btnReset.addEventListener('click', () => {
+      renderCheckboxes(DEFAULT_STATE);
+    });
+  }
+
+  /* ── Boot ── */
+  applyVisibility(loadState());
+
+})();
+</script>
 {% endblock %}
