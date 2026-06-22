@@ -6,7 +6,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView, D
 from django.urls import reverse_lazy
 from django.contrib.auth import login
 from .models import *
-from .forms import SignUpForm, BrandForm, InvoiceForm, InvoiceDetailFormSet
+from .forms import SignUpForm, BrandForm, InvoiceForm, InvoiceDetailFormSet, ProductForm
 from shared.mixins import StaffRequiredMixin, ExportMixin, export_response
 from shared.decorators import audit_action
 from decimal import Decimal
@@ -143,6 +143,7 @@ class ProductListView(LoginRequiredMixin, ExportMixin, ListView):
         ('group.name',                                'Grupo'),
         (lambda o: f"${o.unit_price}",               'Precio'),
         ('stock',                                     'Stock'),
+        (lambda o: f"${o.balance:.2f}",              'Balance'),
         (lambda o: 'Activo' if o.is_active else 'Inactivo', 'Estado'),
         (lambda o: ', '.join(s.name for s in o.suppliers.all()), 'Proveedores'),
     ]
@@ -154,6 +155,7 @@ class ProductListView(LoginRequiredMixin, ExportMixin, ListView):
         'group':     ('group.name',                                'Grupo'),
         'price':     (lambda o: f"${o.unit_price}",               'Precio'),
         'stock':     ('stock',                                     'Stock'),
+        'balance':   (lambda o: f"${o.balance:.2f}",              'Balance'),
         'status':    (lambda o: 'Activo' if o.is_active else 'Inactivo', 'Estado'),
         'suppliers': (lambda o: ', '.join(s.name for s in o.suppliers.all()), 'Proveedores'),
     }
@@ -201,10 +203,16 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
         return Product.objects.select_related('brand', 'group').prefetch_related('suppliers')
 
 class ProductCreateView(LoginRequiredMixin, CreateView):
-    model = Product; fields = ['name', 'description', 'brand', 'group', 'suppliers', 'unit_price', 'stock', 'image', 'is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
+    model = Product
+    form_class = ProductForm
+    template_name = 'billing/product_form.html'
+    success_url = reverse_lazy('billing:product_list')
 
 class ProductUpdateView(LoginRequiredMixin, UpdateView):
-    model = Product; fields = ['name', 'description', 'brand', 'group', 'suppliers', 'unit_price', 'stock', 'image', 'is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
+    model = Product
+    form_class = ProductForm
+    template_name = 'billing/product_form.html'
+    success_url = reverse_lazy('billing:product_list')
 
 class ProductDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     model = Product; template_name = 'billing/product_confirm_delete.html'; success_url = reverse_lazy('billing:product_list')

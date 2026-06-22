@@ -61,6 +61,10 @@ class Product(models.Model):
         ordering = ['name']
     def __str__(self): return f'{self.name} ({self.brand.name})'
 
+    @property
+    def balance(self):
+        return self.unit_price * self.stock
+
 class Customer(models.Model):
     """Clientes. OneToOne con CustomerProfile."""
     dni = models.CharField(
